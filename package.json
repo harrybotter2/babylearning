@@ -15,9 +15,17 @@
       {
         "displayName": "unit",
         "testEnvironment": "node",
-        "testMatch": ["**/__tests__/utils/**/*.test.ts", "**/__tests__/db/**/*.test.ts"],
+        "testMatch": [
+          "**/__tests__/utils/**/*.test.ts",
+          "**/__tests__/db/**/*.test.ts",
+          "**/__tests__/hooks/**/*.test.ts"
+        ],
         "transform": {
           "^.+\\.(ts|tsx)$": ["babel-jest", {"presets": ["babel-preset-expo"]}]
+        },
+        "moduleNameMapper": {
+          "^react-native$": "<rootDir>/__mocks__/react-native.js",
+          "^react-native-reanimated$": "<rootDir>/__mocks__/react-native-reanimated.js"
         },
         "moduleFileExtensions": ["ts", "tsx", "js", "jsx", "json"]
       }
