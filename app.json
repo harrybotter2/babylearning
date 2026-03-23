@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "babylearning",
-    "slug": "babylearning",
+    "name": "Science Dots",
+    "slug": "science-dots",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -12,7 +12,13 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sciencedots.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "音声読み上げ機能のために使用します。",
+        "NSSpeechRecognitionUsageDescription": "音声読み上げ機能のために使用します。"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -21,14 +27,31 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.sciencedots.app",
+      "versionCode": 2,
+      "permissions": []
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-router",
-      "expo-sqlite"
-    ]
+      "expo-dev-client",
+      "expo-sqlite",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#2196F3",
+          "sounds": []
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "06deb2cd-ee7b-48ee-a681-435ab125b813"
+      }
+    },
+    "owner": "ryoichishimizu"
   }
 }

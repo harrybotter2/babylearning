@@ -65,12 +65,25 @@ export function buildUpdateSettings(
   flashSpeed: number,
   soundEnabled: boolean,
   notificationTime: string | null,
+  babyBirthDate: string | null,
+  onboardingCompleted: boolean = false,
 ): string {
   const sound = soundEnabled ? 1 : 0;
   const notif = notificationTime ? `'${notificationTime}'` : 'NULL';
-  return `UPDATE user_settings SET course_id = '${courseId}', flash_speed = ${flashSpeed}, sound_enabled = ${sound}, notification_time = ${notif}`;
+  const onboarding = onboardingCompleted ? 1 : 0;
+  return `UPDATE user_settings SET course_id = '${courseId}', flash_speed = ${flashSpeed}, sound_enabled = ${sound}, notification_time = ${notif}, baby_birth_date = ${babyBirthDate ? `'${babyBirthDate}'` : 'NULL'}, onboarding_completed = ${onboarding}`;
 }
 
 export function buildGetCompletedDates(): string {
-  return `SELECT DISTINCT date FROM daily_sessions WHERE completed_at IS NOT NULL ORDER BY date DESC`;
+  return `
+    SELECT DISTINCT s.date
+    FROM daily_sessions s
+    INNER JOIN lesson_progress p ON p.day_number = s.lesson_day
+    WHERE p.completed_at IS NOT NULL
+    ORDER BY s.date DESC
+  `;
+}
+
+export function buildGetTodaySessionCount(date: string, dayNumber: number): string {
+  return `SELECT COUNT(*) as count FROM daily_sessions WHERE date = '${date}' AND lesson_day = ${dayNumber}`;
 }

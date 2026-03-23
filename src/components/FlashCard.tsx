@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
-import Animated, { FadeIn, FadeOut, useAnimatedStyle, withTiming } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import * as Speech from 'expo-speech';
 import { DotCanvas } from './DotCanvas';
 import { LessonCard } from '../hooks/useLesson';
 
@@ -8,35 +9,75 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface FlashCardProps {
   cards: LessonCard[];
+  soundEnabled: boolean;
   onComplete: () => void;
 }
 
 /**
  * フラッシュカードを順番に表示するコンポーネント。
- * 各カードは flashSpeedMs ミリ秒ごとに自動的に次に進む。
+ * 各カードは「音声読み上げ完了」と「最小表示時間（flashSpeedMs）」の
+ * 両方が揃ってから次に進む。これにより音声と画面の整合性を保証する。
  */
-export function FlashCard({ cards, onComplete }: FlashCardProps) {
+export function FlashCard({ cards, soundEnabled, onComplete }: FlashCardProps) {
   const [currentIndex, setCurrentIndex] = React.useState(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const advance = useCallback(() => {
     setCurrentIndex((prev) => {
-      if (prev + 1 >= cards.length) {
+      const next = prev + 1;
+      if (next >= cards.length) {
         onComplete();
         return prev;
       }
-      return prev + 1;
+      return next;
     });
-  }, [cards.length, onComplete]);
+  }, [cards, onComplete]);
 
   useEffect(() => {
     if (cards.length === 0) return;
+
     const card = cards[currentIndex];
-    timerRef.current = setTimeout(advance, card.flashSpeedMs);
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
+
+    // 音声とタイマーの両方が完了してから次へ進む
+    let cancelled = false;
+    // dotsカード以外は音声なし
+    let speechDone = !soundEnabled || card.type !== 'dots';
+    let timerDone = false;
+
+    const tryAdvance = () => {
+      if (cancelled || !speechDone || !timerDone) return;
+      cancelled = true; // 二重進行を防止
+      advance();
     };
-  }, [currentIndex, cards, advance]);
+
+    // 最小表示時間タイマー
+    timerRef.current = setTimeout(() => {
+      timerDone = true;
+      tryAdvance();
+    }, card.flashSpeedMs);
+
+    // 音声読み上げ（dotsカードのみ）
+    if (!speechDone) {
+      Speech.speak(String(card.count), {
+        language: 'ja',
+        onDone: () => {
+          speechDone = true;
+          tryAdvance();
+        },
+        onError: () => {
+          // 音声エラー時はタイマーのみで進む
+          speechDone = true;
+          tryAdvance();
+        },
+      });
+    }
+
+    return () => {
+      cancelled = true;
+      if (timerRef.current) clearTimeout(timerRef.current);
+      Speech.stop();
+    };
+  }, [currentIndex, cards, soundEnabled, advance]);
 
   if (cards.length === 0) return null;
 
@@ -44,7 +85,12 @@ export function FlashCard({ cards, onComplete }: FlashCardProps) {
 
   return (
     <View style={styles.container}>
-      <Animated.View key={currentIndex} entering={FadeIn.duration(60)} exiting={FadeOut.duration(60)} style={styles.card}>
+      <Animated.View
+        key={currentIndex}
+        entering={FadeIn.duration(60)}
+        exiting={FadeOut.duration(60)}
+        style={styles.card}
+      >
         {card.type === 'dots' ? (
           <DotCanvas
             count={card.count}
@@ -57,13 +103,16 @@ export function FlashCard({ cards, onComplete }: FlashCardProps) {
       </Animated.View>
 
       {/* 進捗インジケーター */}
-      <View style={styles.progressBar}>
-        <View
-          style={[
-            styles.progressFill,
-            { width: `${((currentIndex + 1) / cards.length) * 100}%` },
-          ]}
-        />
+      <View style={styles.progressFooter}>
+        <Text style={styles.cardCounter}>{currentIndex + 1} / {cards.length}</Text>
+        <View style={styles.progressBar}>
+          <View
+            style={[
+              styles.progressFill,
+              { width: `${((currentIndex + 1) / cards.length) * 100}%` },
+            ]}
+          />
+        </View>
       </View>
     </View>
   );
@@ -108,12 +157,25 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1565C0',
   },
+  progressFooter: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 4,
+  },
+  cardCounter: {
+    fontSize: 12,
+    color: '#BBB',
+    textAlign: 'right',
+    fontWeight: '600',
+  },
   progressBar: {
     height: 4,
     backgroundColor: '#E0E0E0',
+    borderRadius: 2,
   },
   progressFill: {
     height: 4,
     backgroundColor: '#1565C0',
+    borderRadius: 2,
   },
 });
